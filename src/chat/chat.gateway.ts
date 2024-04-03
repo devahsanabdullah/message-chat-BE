@@ -1,6 +1,6 @@
 import { WebSocketGateway, SubscribeMessage, WebSocketServer, MessageBody, ConnectedSocket } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-
+import {ChatService} from './chat.service'
 @WebSocketGateway({
   cors: {
     origin: '*', // Adjust in production for security
@@ -10,6 +10,7 @@ import { Server, Socket } from 'socket.io';
 export class ChatGateway {
   @WebSocketServer()
   server: Server;
+  constructor(private chatService: ChatService) {}
 
   @SubscribeMessage('join_room')
   handleJoinRoom(@MessageBody() data: { userId: string; adminId: string }, @ConnectedSocket() client: Socket) {
@@ -19,12 +20,13 @@ export class ChatGateway {
   }
 
   @SubscribeMessage('send_message')
-  handleMessage(@MessageBody() data: { roomId: string; message: string; senderId: string }): void {
+   async handleMessage(@MessageBody() data: { roomId: string; message: string; senderId: string; vendorId:string; userId:string}):  Promise<void>  {
+    await this.chatService.create(data)
     this.server.to(data.roomId).emit('receive_message', data);
   }
 
   private createRoomId(userId: string, adminId: string): string {
-    // Ensure consistent room ID generation regardless of who initiates the chat
+    
     return `chat_${userId}_${adminId}`;
   }
 }
